@@ -91,4 +91,35 @@ WHERE dea.continent IS NOT NULL
 SELECT *,(RollingPeopleVaccinated/population)*100 AS fraction FROM popvsvac
 
 
+-- TEMP TABLE
+CREATE OR REPLACE TABLE Portfolio_COVID.PercentPopulationVaccinated
+(
+  Continent String,
+  Location String,
+  Date datetime,
+  Population numeric,
+  New_Vaccinations numeric,
+  RollingPeopleVaccinated numeric
+);
+
+-- DML STATEMENTS REQUIRE PAYMENT IN BIGQUERY SO WE SKIP THIS PART
+INSERT INTO Portfolio_COVID.PercentPopulationVaccinated(
+SELECT dea.continent,dea.location,dea.date,dea.population, vac.new_vaccinations,
+SUM(CAST(new_vaccinations AS INT)) OVER(PARTITION BY dea.location ORDER BY dea.location,dea.date) AS RollingPeopleVaccinated
+FROM `Portfolio_COVID.covid_deaths` AS dea
+JOIN `Portfolio_COVID.covid_vaccinations` AS vac
+ON dea.location = vac.location AND dea.date = vac.date
+);
+
+SELECT *,(RollingPeopleVaccinated/population)*100 AS fraction FROM PercentPopulationVaccinated
+
+-- VIEW FOR LATER VISUALIZATION
+CREATE VIEW Portfolio_COVID.PercentPopulationVaccinated AS
+SELECT dea.continent,dea.location,dea.date,dea.population, vac.new_vaccinations,
+SUM(CAST(new_vaccinations AS INT)) OVER(PARTITION BY dea.location ORDER BY dea.location,dea.date) AS RollingPeopleVaccinated
+FROM `Portfolio_COVID.covid_deaths` AS dea
+JOIN `Portfolio_COVID.covid_vaccinations` AS vac
+ON dea.location = vac.location AND dea.date = vac.date
+WHERE dea.continent IS NOT NULL
+ORDER BY 2,3
 
